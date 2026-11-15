@@ -23,7 +23,7 @@ from fastapi.testclient import TestClient
 from app.database import get_db
 from app.main import app
 from app.models import (
-    District, Village, Shelter, Node, Reading, Threshold, Alert, AlertDelivery, User, UserRole
+    District, Village, Shelter, Node, Reading, Threshold, Alert, AlertDelivery, Contact, User, UserRole
 )
 from app.services.alert_engine import evaluate_reading_alert
 from app.services.auth import create_access_token, get_password_hash
@@ -213,6 +213,37 @@ class TestTelemetryEndpoints:
         assert len(data) >= 1
         v_summary = next(x for x in data if x["village_name"] == "Kamalabari")
         assert v_summary["risk_level"] in ("none", "advisory", "warning", "danger")
+
+    def test_get_village_by_id(self, client, test_setup):
+        v = test_setup["village"]
+        resp = client.get(f"/villages/{v.id}")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == v.id
+        assert data["name"] == "Kamalabari"
+        assert data["language"] == "assamese"
+
+    def test_get_village_contacts(self, client, db_session, test_setup):
+        v = test_setup["village"]
+        # Add a test contact
+        c = Contact(village_id=v.id, name="Test Contact", phone="+919876543210", role="volunteer")
+        db_session.add(c)
+        db_session.commit()
+
+        resp = client.get(f"/villages/{v.id}/contacts")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) >= 1
+        assert any(x["name"] == "Test Contact" for x in data)
+
+    def test_get_village_status_for_node3(self, client, test_setup):
+        v = test_setup["village"]
+        resp = client.get(f"/village/{v.id}/status")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["village_id"] == v.id
+        assert "severity" in data
+        assert "message" in data
 
 
 # ═══════════════════════════════════════════════════════

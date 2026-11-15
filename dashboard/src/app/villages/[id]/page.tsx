@@ -192,13 +192,23 @@ export default function VillageDetailPage() {
           </p>
         </div>
 
-        <button
-          onClick={loadVillageData}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold cursor-pointer transition-colors"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Refresh Telemetry</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/village/${village.id}`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/80 text-emerald-300 text-xs font-bold transition-colors shadow-sm"
+            title="Open simplified mobile view for villagers"
+          >
+            <span>📱 Village Mode</span>
+          </Link>
+
+          <button
+            onClick={loadVillageData}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold cursor-pointer transition-colors"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Refresh Telemetry</span>
+          </button>
+        </div>
       </div>
 
       {/* AI Flood Forecast Band Section */}

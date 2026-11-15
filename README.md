@@ -286,4 +286,4 @@ npm run dev
 
 ## License
 
-TBD
+MIT License — free and open source for disaster management, humanitarian, and research use in Assam and beyond.

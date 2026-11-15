@@ -17,6 +17,8 @@ const DICTIONARY: Record<Language, Record<string, string>> = {
     nav_villages: "Villages & Gauges",
     nav_alerts: "Alert Management",
     nav_nodes: "Sensor Nodes",
+    nav_village_mode: "Village Mode",
+    village_mode: "Village Mode",
     nav_login: "Officer Sign In",
     nav_logout: "Sign Out",
 
@@ -83,6 +85,8 @@ const DICTIONARY: Record<Language, Record<string, string>> = {
     nav_villages: "গাঁও আৰু গে'জ",
     nav_alerts: "সতৰ্কবাৰ্তা নিয়ন্ত্ৰণ",
     nav_nodes: "চেন্সৰ ন'ডসমূহ",
+    nav_village_mode: "গাঁও মোড (সহজ দৰ্শন)",
+    village_mode: "গাঁও মোড (সহজ দৰ্শন)",
     nav_login: "বিষয়াসকলৰ প্ৰৱেশ",
     nav_logout: "প্ৰস্থান",
 

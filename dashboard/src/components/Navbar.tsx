@@ -40,6 +40,7 @@ export const Navbar: React.FC = () => {
     { href: "/", label: t("nav_overview"), icon: <Activity className="w-4 h-4" /> },
     { href: "/alerts", label: t("nav_alerts"), icon: <AlertTriangle className="w-4 h-4" /> },
     { href: "/nodes", label: t("nav_nodes"), icon: <Radio className="w-4 h-4" /> },
+    { href: "/village/1", label: t("nav_village_mode"), icon: <Layers className="w-4 h-4" /> },
   ];
 
   return (
