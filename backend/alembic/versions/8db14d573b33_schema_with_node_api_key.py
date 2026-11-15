@@ -1,8 +1,8 @@
-"""initial schema
+"""schema with node api_key
 
-Revision ID: 03856d86fdba
+Revision ID: 8db14d573b33
 Revises: 
-Create Date: 2026-11-15 18:35:17.241996
+Create Date: 2026-11-15 18:58:02.696661
 """
 from typing import Sequence, Union
 
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '03856d86fdba'
+revision: str = '8db14d573b33'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -76,11 +76,18 @@ def upgrade() -> None:
     sa.Column('lat', sa.Float(), nullable=False),
     sa.Column('lng', sa.Float(), nullable=False),
     sa.Column('status', sa.String(length=20), nullable=False),
-    sa.Column('battery_pct', sa.Float(), nullable=False),
+    sa.Column('battery_pct', sa.Float(), nullable=True),
     sa.Column('last_seen', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('api_key', sa.String(length=64), nullable=False),
+    sa.Column('device_type', sa.String(length=20), nullable=False),
+    sa.Column('source', sa.String(length=20), nullable=False),
+    sa.Column('mount_height_cm', sa.Float(), nullable=True),
+    sa.Column('raw_dry', sa.Integer(), nullable=True),
+    sa.Column('raw_wet', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['village_id'], ['villages.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_index(op.f('ix_nodes_api_key'), 'nodes', ['api_key'], unique=False)
     op.create_table('thresholds',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('node_type', sa.String(length=30), nullable=False),
@@ -119,6 +126,7 @@ def downgrade() -> None:
     op.drop_table('readings')
     op.drop_table('alert_deliveries')
     op.drop_table('thresholds')
+    op.drop_index(op.f('ix_nodes_api_key'), table_name='nodes')
     op.drop_table('nodes')
     op.drop_table('contacts')
     op.drop_table('alerts')
@@ -126,3 +134,4 @@ def downgrade() -> None:
     op.drop_table('shelters')
     op.drop_table('districts')
     # ### end Alembic commands ###
+

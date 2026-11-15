@@ -2,6 +2,9 @@
 Seed script — populates the database with realistic data for 4 flood-prone
 Assam districts: Dhemaji, Lakhimpur, Majuli, Barpeta.
 
+Hardware per ESP8266 board: HC-SR04 (water level), capacitive soil-moisture
+V2.0, DHT11 (temperature + humidity), SSD1306 OLED display.
+
 Usage:
     cd backend
     .venv/Scripts/python seed.py          # Windows
@@ -89,20 +92,28 @@ DISTRICTS = {
 }
 # fmt: on
 
-NODE_TYPES = ["water_level", "rain_gauge", "soil_moisture", "seismic"]
+# Each physical ESP8266 board carries these 4 sensors:
+#   HC-SR04 → water_level, Capacitive V2.0 → soil_moisture,
+#   DHT11  → temperature + humidity
+PHYSICAL_SENSOR_TYPES = ["water_level", "soil_moisture", "temperature", "humidity"]
+
 NODE_UNITS = {
-    "water_level": "m",
-    "rain_gauge": "mm",
+    "water_level":   "cm",
+    "rain_gauge":    "mm",
     "soil_moisture": "%",
-    "seismic": "g",
+    "seismic":       "g",
+    "temperature":   "°C",
+    "humidity":      "%",
 }
 
 # ─── Default Thresholds ─────────────────────────────────
 DEFAULT_THRESHOLDS = {
-    "water_level":   {"warning": 6.0,  "danger": 8.5},
-    "rain_gauge":    {"warning": 50.0, "danger": 100.0},
-    "soil_moisture": {"warning": 80.0, "danger": 92.0},
-    "seismic":       {"warning": 0.5,  "danger": 1.2},
+    "water_level":   {"warning": 600.0,  "danger": 850.0},   # cm
+    "rain_gauge":    {"warning": 50.0,   "danger": 100.0},   # mm/h
+    "soil_moisture": {"warning": 80.0,   "danger": 92.0},    # %
+    "seismic":       {"warning": 0.5,    "danger": 1.2},     # g
+    "temperature":   {"warning": 40.0,   "danger": 45.0},    # °C
+    "humidity":      {"warning": 90.0,   "danger": 98.0},    # %
 }
 
 # ─── Contacts pool ──────────────────────────────────────
@@ -121,18 +132,14 @@ ROLES = ["volunteer", "gram_panchayat", "asdma"]
 
 
 def fake_phone() -> str:
-    """Generate a fake Indian mobile number."""
     return f"+919{random.randint(100000000, 999999999)}"
 
 
 def seed():
     """Create all tables and populate with realistic data."""
-    # Create tables directly (for seeding; migrations handle schema in prod)
     Base.metadata.create_all(bind=engine)
-
     db = SessionLocal()
     try:
-        # ── Check if data already seeded ─────────────────
         if db.query(District).first():
             print("⚠  Database already seeded — skipping.")
             return
@@ -143,7 +150,7 @@ def seed():
             obj = Shelter(**s)
             db.add(obj)
             shelter_objs.append(obj)
-        db.flush()  # get IDs
+        db.flush()
 
         # ── Districts & Villages ─────────────────────────
         village_objs = []
@@ -151,7 +158,6 @@ def seed():
             district = District(name=dist_name, state=dist_data["state"])
             db.add(district)
             db.flush()
-
             for v in dist_data["villages"]:
                 village = Village(
                     district_id=district.id,
@@ -167,115 +173,161 @@ def seed():
                 village_objs.append(village)
             db.flush()
 
-        # ── Nodes (2-4 per village) ──────────────────────
+        # ── Physical sensor nodes (ESP8266 boards) ───────
         now = datetime.now(timezone.utc)
         node_objs = []
         for village in village_objs:
-            n_nodes = random.randint(2, 4)
-            chosen_types = random.sample(NODE_TYPES, k=n_nodes)
-            for nt in chosen_types:
+            for sensor_type in PHYSICAL_SENSOR_TYPES:
+                extra = dict(
+                    device_type="esp8266",
+                    source="device",
+                    mount_height_cm=None,
+                    raw_dry=None,
+                    raw_wet=None,
+                )
+                if sensor_type == "water_level":
+                    extra["mount_height_cm"] = round(random.uniform(300, 600), 1)
+                elif sensor_type == "soil_moisture":
+                    extra["raw_dry"] = random.randint(750, 850)
+                    extra["raw_wet"] = random.randint(300, 420)
+
                 node = Node(
                     village_id=village.id,
-                    type=nt,
-                    lat=village.lat + random.uniform(-0.005, 0.005),
-                    lng=village.lng + random.uniform(-0.005, 0.005),
+                    type=sensor_type,
+                    lat=village.lat + random.uniform(-0.003, 0.003),
+                    lng=village.lng + random.uniform(-0.003, 0.003),
                     status="active",
-                    battery_pct=round(random.uniform(45.0, 100.0), 1),
-                    last_seen=now - timedelta(minutes=random.randint(0, 120)),
+                    battery_pct=None,  # no battery monitoring
+                    last_seen=now - timedelta(minutes=random.randint(0, 60)),
+                    api_key=f"node_key_{village.id}_{sensor_type}",
+                    **extra,
                 )
                 db.add(node)
                 node_objs.append(node)
         db.flush()
 
-        # ── Readings (5 recent per node) ─────────────────
+        # ── Virtual rain_gauge nodes (source=api) ────────
+        rain_nodes = []
+        for village in village_objs:
+            rain_node = Node(
+                village_id=village.id,
+                type="rain_gauge",
+                lat=village.lat,
+                lng=village.lng,
+                status="active",
+                battery_pct=None,
+                last_seen=now,
+                device_type="virtual",
+                source="api",
+                api_key=f"node_key_{village.id}_rain_gauge",
+            )
+            db.add(rain_node)
+            rain_nodes.append(rain_node)
+        db.flush()
+
+        # ── Readings (5 recent per physical node) ────────
         for node in node_objs:
             unit = NODE_UNITS[node.type]
-            base_val = {
-                "water_level": random.uniform(2.0, 7.0),
-                "rain_gauge": random.uniform(0.0, 60.0),
-                "soil_moisture": random.uniform(30.0, 85.0),
-                "seismic": random.uniform(0.0, 0.3),
-            }[node.type]
             for i in range(5):
                 ts = now - timedelta(minutes=i * 15)
-                val = round(base_val + random.uniform(-0.5, 0.5), 2)
+                if node.type == "water_level":
+                    # HC-SR04 distance → water level
+                    distance_cm = random.uniform(50, 350)
+                    val = round(node.mount_height_cm - distance_cm, 1)
+                    val = max(0, val)
+                elif node.type == "soil_moisture":
+                    # Raw ADC → 0-100%
+                    raw = random.randint(node.raw_wet, node.raw_dry)
+                    pct = (node.raw_dry - raw) / (node.raw_dry - node.raw_wet) * 100
+                    val = round(max(0, min(100, pct)), 1)
+                elif node.type == "temperature":
+                    # DHT11: integer resolution, ±2°C, range 0-50°C
+                    val = float(random.randint(22, 36))
+                elif node.type == "humidity":
+                    # DHT11: integer resolution, ±5%, range 20-90%
+                    val = float(random.randint(55, 95))
+                else:
+                    val = round(random.uniform(0.0, 1.0), 2)
+
+                # DHT11 occasional failed read (~5%)
+                quality = "ok"
+                if node.type in ("temperature", "humidity") and random.random() < 0.05:
+                    quality = "error"
+                    val = 0.0
+
                 reading = Reading(
-                    node_id=node.id,
-                    ts=ts,
-                    value=max(0, val),
-                    unit=unit,
+                    node_id=node.id, ts=ts, value=val, unit=unit, quality_flag=quality,
+                )
+                db.add(reading)
+
+        # ── Seed rain readings (placeholder) ─────────────
+        for rain_node in rain_nodes:
+            for i in range(3):
+                reading = Reading(
+                    node_id=rain_node.id,
+                    ts=now - timedelta(hours=i),
+                    value=round(random.uniform(0.0, 15.0), 1),
+                    unit="mm",
                     quality_flag="ok",
                 )
                 db.add(reading)
 
         # ── Default Thresholds ───────────────────────────
         for nt, levels in DEFAULT_THRESHOLDS.items():
-            threshold = Threshold(
-                node_type=nt,
-                village_id=None,
-                warning_level=levels["warning"],
-                danger_level=levels["danger"],
-            )
-            db.add(threshold)
+            db.add(Threshold(
+                node_type=nt, village_id=None,
+                warning_level=levels["warning"], danger_level=levels["danger"],
+            ))
 
         # ── Contacts (2-3 per village) ───────────────────
         for village in village_objs:
-            n_contacts = random.randint(2, 3)
-            for _ in range(n_contacts):
-                contact = Contact(
+            for _ in range(random.randint(2, 3)):
+                db.add(Contact(
                     village_id=village.id,
                     name=f"{random.choice(FIRST_NAMES)} {random.choice(LAST_NAMES)}",
                     phone=fake_phone(),
                     role=random.choice(ROLES),
-                )
-                db.add(contact)
+                ))
 
         # ── Sample Alerts & Deliveries ───────────────────
         hazard_messages = {
             "flood": "Water level rising rapidly. Move to higher ground immediately.",
             "landslide": "Heavy rainfall detected. Potential landslide risk in hilly areas.",
-            "earthquake": "Seismic activity detected. Follow earthquake safety protocols.",
         }
-        # Create a few sample alerts for char-area villages
         char_villages = [v for v in village_objs if v.is_char_area]
         for v in char_villages[:4]:
             hazard = random.choice(["flood", "landslide"])
             severity = random.choice(["advisory", "warning", "danger"])
             alert = Alert(
-                village_id=v.id,
-                severity=severity,
-                hazard=hazard,
+                village_id=v.id, severity=severity, hazard=hazard,
                 message=hazard_messages[hazard],
                 created_at=now - timedelta(hours=random.randint(1, 48)),
-                status="active",
-                source=random.choice(["rule", "ai"]),
+                status="active", source=random.choice(["rule", "ai"]),
             )
             db.add(alert)
             db.flush()
-
-            # Delivery records for each alert
             for channel in ["sms", "dashboard"]:
-                delivery = AlertDelivery(
-                    alert_id=alert.id,
-                    channel=channel,
+                db.add(AlertDelivery(
+                    alert_id=alert.id, channel=channel,
                     status="sent" if channel == "dashboard" else "delivered",
                     sent_at=alert.created_at + timedelta(seconds=random.randint(5, 60)),
-                )
-                db.add(delivery)
+                ))
 
         db.commit()
 
         # ── Summary ──────────────────────────────────────
         print("✅ Seed complete:")
-        print(f"   Districts:  {db.query(District).count()}")
-        print(f"   Villages:   {db.query(Village).count()}")
-        print(f"   Shelters:   {db.query(Shelter).count()}")
-        print(f"   Nodes:      {db.query(Node).count()}")
-        print(f"   Readings:   {db.query(Reading).count()}")
-        print(f"   Thresholds: {db.query(Threshold).count()}")
-        print(f"   Contacts:   {db.query(Contact).count()}")
-        print(f"   Alerts:     {db.query(Alert).count()}")
-        print(f"   Deliveries: {db.query(AlertDelivery).count()}")
+        print(f"   Districts:    {db.query(District).count()}")
+        print(f"   Villages:     {db.query(Village).count()}")
+        print(f"   Shelters:     {db.query(Shelter).count()}")
+        print(f"   Nodes total:  {db.query(Node).count()}")
+        print(f"     ├ physical: {db.query(Node).filter(Node.source == 'device').count()}")
+        print(f"     └ virtual:  {db.query(Node).filter(Node.source == 'api').count()}")
+        print(f"   Readings:     {db.query(Reading).count()}")
+        print(f"   Thresholds:   {db.query(Threshold).count()}")
+        print(f"   Contacts:     {db.query(Contact).count()}")
+        print(f"   Alerts:       {db.query(Alert).count()}")
+        print(f"   Deliveries:   {db.query(AlertDelivery).count()}")
 
     except Exception:
         db.rollback()
@@ -286,4 +338,3 @@ def seed():
 
 if __name__ == "__main__":
     seed()
-

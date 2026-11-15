@@ -1,2 +1,2 @@
-# Simulator has no extra deps beyond stdlib for now.
-
+httpx>=0.27.0,<1.0
+paho-mqtt>=2.0.0,<3.0
