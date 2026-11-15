@@ -89,7 +89,7 @@ export default function VillageCharGridPage() {
       occupancyPct: 48.0,
       barColor: "bg-amber-500",
       isChar: true,
-      isHighRisk: false,
+      isHighRisk: true,
       isShelterFull: false,
     },
     {
@@ -141,7 +141,7 @@ export default function VillageCharGridPage() {
       occupancyPct: 55.0,
       barColor: "bg-amber-500",
       isChar: false,
-      isHighRisk: false,
+      isHighRisk: true,
       isShelterFull: false,
     },
     {
@@ -395,7 +395,7 @@ export default function VillageCharGridPage() {
             {[
               { id: "all", label: "All Villages (7)" },
               { id: "chars", label: "Char Sandbars Only (4)" },
-              { id: "high_risk", label: "High Risk / Danger (1)" },
+              { id: "high_risk", label: "High Risk / Danger (3)" },
               { id: "shelter_full", label: "Shelter > 70% Full" },
             ].map((tab) => (
               <button
