@@ -28,6 +28,7 @@ from app.models.node import Node
 from app.models.reading import Reading
 from app.models.threshold import Threshold
 from app.models.village import Village
+from app.services.alert_dispatcher import alert_dispatcher
 from app.services.websocket_manager import ws_manager
 from app.translations.alert_messages import get_ai_forecast_alert_message
 
@@ -367,13 +368,8 @@ def _evaluate_and_raise_ai_alert(
     db.add(alert)
     db.flush()
 
-    delivery = AlertDelivery(
-        alert_id=alert.id,
-        channel="dashboard",
-        status="sent",
-        sent_at=now_utc,
-    )
-    db.add(delivery)
+    # Dispatch through multi-channel delivery layer
+    alert_dispatcher.dispatch_alert(alert, db)
     db.commit()
 
     logger.warning("AI Forecast Alert [%s] raised for %s: %s", severity.upper(), village_name, msg)

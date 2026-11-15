@@ -23,6 +23,15 @@ class ShelterOut(BaseModel):
     capacity: int
 
 
+class ContactOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    village_id: int
+    name: str
+    phone: str
+    role: str
+
+
 class VillageOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int

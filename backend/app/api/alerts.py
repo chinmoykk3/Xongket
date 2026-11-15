@@ -15,6 +15,7 @@ from app.models.alert_delivery import AlertDelivery
 from app.models.user import User, UserRole
 from app.models.village import Village
 from app.schemas.api import AcknowledgeAlertIn, AlertOut, ManualAlertIn
+from app.services.alert_dispatcher import alert_dispatcher
 from app.services.auth import get_current_user, require_roles
 from app.services.websocket_manager import ws_manager
 from app.translations.alert_messages import get_alert_message
@@ -96,13 +97,8 @@ def create_manual_alert(
     db.add(alert)
     db.flush()
 
-    delivery = AlertDelivery(
-        alert_id=alert.id,
-        channel="dashboard",
-        status="sent",
-        sent_at=now,
-    )
-    db.add(delivery)
+    # Dispatch across channels (SMS, WhatsApp, IVR, Dashboard, Siren)
+    alert_dispatcher.dispatch_alert(alert, db, bypass_rate_limit=True)
     db.commit()
     db.refresh(alert)
 

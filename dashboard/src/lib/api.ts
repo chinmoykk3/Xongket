@@ -63,6 +63,8 @@ export const api = {
     if (params?.language) q.set("language", params.language);
     return request(`/villages?${q.toString()}`);
   },
+  getVillage: (id: number): Promise<Village> => request(`/villages/${id}`),
+  getVillageContacts: (id: number): Promise<Contact[]> => request(`/villages/${id}/contacts`),
   getShelters: (): Promise<Shelter[]> => request("/shelters"),
   getNodes: (params?: { village_id?: number; type?: string; status?: string }): Promise<Node[]> => {
     const q = new URLSearchParams();

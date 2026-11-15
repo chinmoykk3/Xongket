@@ -24,6 +24,7 @@ from app.models.node import Node
 from app.models.reading import Reading
 from app.models.threshold import Threshold
 from app.models.village import Village
+from app.services.alert_dispatcher import alert_dispatcher
 from app.services.websocket_manager import ws_manager
 from app.translations.alert_messages import get_alert_message
 
@@ -262,15 +263,8 @@ def evaluate_reading_alert(db: Session, reading: Reading, node: Node) -> Optiona
     db.add(alert)
     db.flush()
 
-    # Create initial delivery log
-    delivery = AlertDelivery(
-        alert_id=alert.id,
-        channel="dashboard",
-        status="sent",
-        sent_at=ts_now,
-    )
-    db.add(delivery)
-    db.flush()
+    # Dispatch alert across pluggable channels (SMS, WhatsApp, IVR, Dashboard, Siren)
+    alert_dispatcher.dispatch_alert(alert, db)
 
     logger.warning(
         "🚨 TRIGGERED ALERT id=%d village=%s (%s/%s): %s",

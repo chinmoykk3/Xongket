@@ -241,6 +241,39 @@ python -m pytest tests/ -v
 python -m app.services.rainfall
 ```
 
+---
+
+## 📢 Multi-Channel Alert Delivery Layer
+
+Xongket includes a pluggable, carrier-grade alert delivery layer (`backend/app/services/channels/`):
+
+- **Pluggable Interface**: `send(alert, contact) -> DeliveryResult`
+- **Adapters**:
+  - **SMS**: Mock adapter (default, logs to DB) and Twilio REST API adapter (`ALERT_SMS_PROVIDER=twilio`).
+  - **Voice (IVR)**: Mock automated voice call (default) and Twilio Programmable Voice (`ALERT_VOICE_PROVIDER=twilio`) speaking localized warnings.
+  - **WhatsApp**: Mock adapter (default) and Meta Cloud Graph API adapter (`ALERT_WHATSAPP_PROVIDER=meta`).
+  - **Dashboard Push**: Real-time WebSocket live broadcast to connected officers.
+  - **Siren Trigger**: IoT relay / hardware alarm activation for imminent flood danger.
+- **Routing Rules by Severity**:
+  - `advisory`: Dispatched to village **volunteers** only via SMS, WhatsApp, and Dashboard.
+  - `warning`: Dispatched to **volunteers** and **Gram Panchayat** members via SMS, WhatsApp, IVR, and Dashboard.
+  - `danger`: Dispatched to **all contacts** (volunteers, GP, ASDMA disaster officers) via SMS, WhatsApp, IVR, Dashboard, and activates the **village emergency siren**.
+- **Multilingual Localization**: Automatic translation into Assamese (অসমীয়া), Bodo (बर'), Bengali (বাংলা), Hindi (हिन्दी), and English using verified flood/landslide templates.
+- **Resilience**: Exponential backoff retries on transient network failures and per-village rate limiting to prevent notification spam.
+
+---
+
+## 📱 Rural Village Mode (`/village/[id]`)
+
+Designed specifically for low-literacy users, cheap smartphones, and 2G/3G connections in rural riverine and char areas:
+- **Massive Visual Symbols**: High-contrast, color-coded status cards (Green ✓ Safe / Amber ▲ Warning / Red ⚠ Danger).
+- **Web Speech API Voice Readout**: One-tap `🔊 Listen to Alert` button that speaks the alert aloud in Assamese, Bengali, Bodo, or Hindi.
+- **One-Touch Emergency Calling**: Direct phone buttons for the local village volunteer and the 24/7 ASDMA State Disaster Helpline (`1079`).
+- **Shelter Navigation**: Names, capacities, and Google Maps directions to the nearest safe flood shelter.
+- **Zero Heavy Bundles**: No canvas maps or charting libraries loaded on this route for sub-second loads on low-end hardware.
+
+---
+
 ### 5 · Start Servers Concurrently
 
 ```bash

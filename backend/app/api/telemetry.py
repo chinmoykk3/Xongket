@@ -19,12 +19,14 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.alert import Alert, AlertStatus
+from app.models.contact import Contact
 from app.models.district import District
 from app.models.node import Node
 from app.models.reading import Reading
 from app.models.shelter import Shelter
 from app.models.village import Village
 from app.schemas.api import (
+    ContactOut,
     DistrictOut,
     NodeOut,
     ReadingOut,
@@ -58,6 +60,28 @@ def list_villages(
     if language is not None:
         query = query.filter(Village.language == language.lower())
     return query.order_by(Village.name).all()
+
+
+@router.get("/villages/{id}", response_model=VillageOut, summary="Get village details by ID")
+def get_village(id: int, db: Session = Depends(get_db)):
+    village = db.query(Village).filter(Village.id == id).first()
+    if not village:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Village with id={id} not found",
+        )
+    return village
+
+
+@router.get("/villages/{id}/contacts", response_model=list[ContactOut], summary="List emergency contacts for village")
+def get_village_contacts(id: int, db: Session = Depends(get_db)):
+    village = db.query(Village).filter(Village.id == id).first()
+    if not village:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Village with id={id} not found",
+        )
+    return db.query(Contact).filter(Contact.village_id == id).order_by(Contact.role).all()
 
 
 # ── Shelters ─────────────────────────────────────────────
