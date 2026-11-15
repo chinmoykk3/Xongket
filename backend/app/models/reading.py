@@ -25,7 +25,7 @@ class Reading(Base):
     )
     value: Mapped[float] = mapped_column(Float, nullable=False)
     unit: Mapped[str] = mapped_column(String(20), nullable=False)
-    quality_flag: Mapped[str] = mapped_column(String(10), nullable=False, default="ok")
+    quality_flag: Mapped[str] = mapped_column(String(30), nullable=False, default="ok")
 
     # relationships
     node = relationship("Node", back_populates="readings")

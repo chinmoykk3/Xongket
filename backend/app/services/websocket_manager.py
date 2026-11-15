@@ -50,5 +50,13 @@ class ConnectionManager:
                 if conn in self.active_connections:
                     self.active_connections.remove(conn)
 
+    def broadcast_sync(self, event_type: str, data: dict[str, Any]):
+        """Safely schedule a broadcast on the running asyncio event loop if active."""
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self.broadcast(event_type, data))
+        except RuntimeError:
+            pass
+
 
 ws_manager = ConnectionManager()

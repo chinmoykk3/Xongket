@@ -30,19 +30,7 @@ from app.services.auth import create_access_token, get_password_hash
 from app.translations.alert_messages import get_alert_message, TEMPLATES
 
 
-@pytest.fixture()
-def client(db_session):
-    def _override_get_db():
-        try:
-            yield db_session
-        finally:
-            pass
-
-    app.dependency_overrides[get_db] = _override_get_db
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
-
+# (client fixture is provided globally by conftest.py)
 
 @pytest.fixture()
 def test_setup(db_session):

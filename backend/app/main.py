@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api import (
+    ai_router,
     alerts_router,
     auth_router,
     ingest_router,
@@ -15,6 +16,7 @@ from .api import (
     ws_router,
 )
 from .config import settings
+from .services.forecast_scheduler import shutdown_forecast_scheduler, start_forecast_scheduler
 from .services.mqtt_subscriber import run_mqtt_subscriber
 
 logger = logging.getLogger("xongket")
@@ -29,9 +31,13 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("MQTT_ENABLED=false. Skipping MQTT subscriber startup.")
 
+    # Start APScheduler for AI flood forecasts
+    start_forecast_scheduler()
+
     try:
         yield
     finally:
+        shutdown_forecast_scheduler()
         if mqtt_task is not None:
             logger.info("Shutting down MQTT subscriber task...")
             mqtt_task.cancel()
@@ -63,6 +69,7 @@ app.include_router(ingest_router)
 app.include_router(telemetry_router)
 app.include_router(alerts_router)
 app.include_router(ws_router)
+app.include_router(ai_router)
 
 
 @app.get("/health")

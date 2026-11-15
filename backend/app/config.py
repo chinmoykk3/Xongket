@@ -36,5 +36,9 @@ class Settings(BaseSettings):
     # Optional master API key (can bypass individual node key checks if set)
     master_api_key: str | None = None
 
+    # ── AI Forecasting & Scheduler ──────────────────────
+    forecast_scheduler_enabled: bool = True
+    forecast_interval_minutes: int = 10
+
 
 settings = Settings()

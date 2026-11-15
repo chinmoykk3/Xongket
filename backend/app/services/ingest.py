@@ -20,6 +20,7 @@ from app.models.node import Node
 from app.models.reading import Reading
 from app.schemas.ingest import ReadingIngestItem
 from app.services.websocket_manager import ws_manager
+from ai.anomaly.detector import default_anomaly_detector
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +172,26 @@ def process_ingest_items(
             node_batch_value_history[item.node_id],
         ):
             quality_flag = "stuck_value"
+
+        # 4. Sensor anomaly detection (Rolling Z-score + Isolation Forest)
+        if quality_flag == "ok":
+            recent_db_vals = [
+                r.value
+                for r in db.query(Reading.value)
+                .filter(Reading.node_id == node.id, Reading.quality_flag == "ok")
+                .order_by(Reading.ts.desc())
+                .limit(15)
+                .all()
+            ]
+            recent_db_vals.reverse()
+            combined_history = recent_db_vals + node_batch_value_history[item.node_id]
+            anomaly_res = default_anomaly_detector.evaluate_reading(
+                current_value=item.value,
+                recent_history=combined_history,
+                sensor_type=node.type,
+            )
+            if anomaly_res.is_anomaly:
+                quality_flag = "anomaly"
 
         node_batch_value_history[item.node_id].append(item.value)
 

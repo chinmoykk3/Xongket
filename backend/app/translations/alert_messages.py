@@ -108,3 +108,47 @@ def get_alert_message(
         unit=unit,
     )
     return formatted
+
+
+def get_ai_forecast_alert_message(
+    severity: str,
+    language: str,
+    village_name: str,
+    predicted_value: float,
+    unit: str,
+    lead_time_hours: int,
+    explanation: str,
+) -> str:
+    """Format an AI forecast alert with lead time and plain-language explanation."""
+    lang = (language or "assamese").lower()
+    val_str = f"{predicted_value:.1f}"
+    h_str = f"{lead_time_hours}"
+
+    if lang == "assamese":
+        msg = (
+            f"AI আগজাননী ({severity.upper()}): {village_name}ত প্ৰায় {h_str} ঘণ্টাৰ ভিতৰত "
+            f"পানীৰ মাত্ৰা {val_str}{unit} পোৱাৰ সম্ভাৱনা আছে। কাৰণ: {explanation}"
+        )
+    elif lang == "bodo":
+        msg = (
+            f"AI सिगां खौरां ({severity.upper()}): {village_name} आव {h_str} घन्टायाव "
+            f"दैनि बिबाङा {val_str}{unit} मोनहैनायनि खौरां। जाहोन: {explanation}"
+        )
+    elif lang == "bengali":
+        msg = (
+            f"AI পূর্বাভাস ({severity.upper()}): {village_name}-এ প্রায় {h_str} ঘণ্টার মধ্যে "
+            f"জলস্তর {val_str}{unit} পৌঁছানোর আশঙ্কা রয়েছে। কারণ: {explanation}"
+        )
+    elif lang == "hindi":
+        msg = (
+            f"AI पूर्वानुमान ({severity.upper()}): {village_name} में लगभग {h_str} घंटे में "
+            f"जल स्तर {val_str}{unit} पहुँचने की संभावना है। कारण: {explanation}"
+        )
+    else:  # english fallback
+        plural = "s" if lead_time_hours != 1 else ""
+        msg = (
+            f"AI Early Warning ({severity.upper()}): Water level in {village_name} is expected to reach "
+            f"{val_str}{unit} in about {h_str} hour{plural}. Reason: {explanation}"
+        )
+
+    return msg

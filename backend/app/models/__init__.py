@@ -10,6 +10,7 @@ from .alert import Alert
 from .alert_delivery import AlertDelivery
 from .contact import Contact
 from .user import User, UserRole
+from .forecast import Forecast
 
 __all__ = [
     "District",
@@ -23,4 +24,5 @@ __all__ = [
     "Contact",
     "User",
     "UserRole",
+    "Forecast",
 ]

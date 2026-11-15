@@ -96,13 +96,20 @@ def get_current_user(
     return user
 
 
-def require_roles(allowed_roles: list[str]):
-    """Role-based authorization dependency factory."""
+def require_roles(*allowed_roles: str | list[str]):
+    """Role-based authorization dependency factory. Accepts roles as varargs or a list."""
+    flattened_roles: list[str] = []
+    for r in allowed_roles:
+        if isinstance(r, (list, tuple)):
+            flattened_roles.extend(r)
+        else:
+            flattened_roles.append(r)
+
     def _role_checker(user: User = Depends(get_current_user)) -> User:
-        if user.role not in allowed_roles:
+        if user.role not in flattened_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Forbidden: role '{user.role}' lacks permissions. Required one of: {allowed_roles}",
+                detail=f"Forbidden: role '{user.role}' lacks permissions. Required one of: {flattened_roles}",
             )
         return user
     return _role_checker

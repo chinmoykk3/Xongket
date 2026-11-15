@@ -130,3 +130,30 @@ class UserOut(BaseModel):
     role: str
     district_id: Optional[int] = None
     is_active: bool
+
+class ForecastOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    node_id: int
+    generated_at: datetime
+    target_ts: datetime
+    horizon_hours: int
+    predicted_value: float
+    lower_bound: float
+    upper_bound: float
+    unit: str
+    model_name: str
+    explanation: Optional[str] = None
+
+
+class LandslideRiskOut(BaseModel):
+    village_id: int
+    village_name: str
+    risk_score: float
+    severity: str
+    soil_moisture_pct: float
+    rainfall_24h_mm: float
+    rainfall_72h_mm: float
+    slope_class: str
+    explanation: str
+    contributing_factors: dict
