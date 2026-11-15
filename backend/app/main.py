@@ -7,7 +7,13 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api.ingest import router as ingest_router
+from .api import (
+    alerts_router,
+    auth_router,
+    ingest_router,
+    telemetry_router,
+    ws_router,
+)
 from .config import settings
 from .services.mqtt_subscriber import run_mqtt_subscriber
 
@@ -37,22 +43,26 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.1.0",
+    version="0.2.0",
     description="Integrated Rural Disaster Management System for Assam — IoT, AI & Cloud",
     lifespan=lifespan,
 )
 
-# Allow the Next.js dashboard during development
+# Allow dashboard / local clients during development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include API routers
+# Include all API routers
+app.include_router(auth_router)
 app.include_router(ingest_router)
+app.include_router(telemetry_router)
+app.include_router(alerts_router)
+app.include_router(ws_router)
 
 
 @app.get("/health")
@@ -61,5 +71,5 @@ async def health_check():
     return {
         "status": "healthy",
         "service": settings.app_name,
-        "version": "0.1.0",
+        "version": "0.2.0",
     }

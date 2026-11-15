@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     port: int = 8000
     database_url: str = f"sqlite:///{BACKEND_DIR / 'xongket.db'}"
 
+    # ── Auth / JWT ───────────────────────────────────────
+    jwt_secret: str = "xongket-disaster-management-secret-key-assam-2026"
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 1440  # 24 hours
+
     # ── MQTT Broker Settings ─────────────────────────────
     mqtt_enabled: bool = False
     mqtt_broker: str = "localhost"

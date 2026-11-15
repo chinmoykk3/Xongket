@@ -17,8 +17,9 @@ import random
 from app.database import engine, SessionLocal, Base
 from app.models import (
     District, Village, Shelter, Node, Reading,
-    Threshold, Alert, AlertDelivery, Contact,
+    Threshold, Alert, AlertDelivery, Contact, User,
 )
+from app.services.auth import get_password_hash
 
 random.seed(42)
 
@@ -312,6 +313,42 @@ def seed():
                     status="sent" if channel == "dashboard" else "delivered",
                     sent_at=alert.created_at + timedelta(seconds=random.randint(5, 60)),
                 ))
+
+        # ── System Users (Auth) ──────────────────────────
+        users_to_seed = [
+            User(
+                username="admin",
+                email="admin@xongket.assam.gov.in",
+                hashed_password=get_password_hash("admin123"),
+                role="admin",
+                is_active=True,
+            ),
+            User(
+                username="officer_majuli",
+                email="officer.majuli@xongket.assam.gov.in",
+                hashed_password=get_password_hash("officer123"),
+                role="district_officer",
+                district_id=3,  # Majuli
+                is_active=True,
+            ),
+            User(
+                username="officer_dhemaji",
+                email="officer.dhemaji@xongket.assam.gov.in",
+                hashed_password=get_password_hash("officer123"),
+                role="district_officer",
+                district_id=1,  # Dhemaji
+                is_active=True,
+            ),
+            User(
+                username="volunteer_jonai",
+                email="volunteer.jonai@gmail.com",
+                hashed_password=get_password_hash("volunteer123"),
+                role="volunteer",
+                is_active=True,
+            ),
+        ]
+        for u in users_to_seed:
+            db.add(u)
 
         db.commit()
 

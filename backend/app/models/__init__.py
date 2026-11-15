@@ -9,6 +9,7 @@ from .threshold import Threshold
 from .alert import Alert
 from .alert_delivery import AlertDelivery
 from .contact import Contact
+from .user import User, UserRole
 
 __all__ = [
     "District",
@@ -20,5 +21,6 @@ __all__ = [
     "Alert",
     "AlertDelivery",
     "Contact",
+    "User",
+    "UserRole",
 ]
-
