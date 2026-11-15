@@ -51,9 +51,9 @@ export const CommandSidebar: React.FC<CommandSidebarProps> = ({
     },
     {
       label: "Landslide & Geotechnical",
-      href: "/villages/2",
+      href: "/landslide",
       icon: Mountain,
-      active: pathname.startsWith("/villages/2"),
+      active: pathname.startsWith("/landslide"),
     },
     {
       label: "Multi-Channel Dispatch",
@@ -63,9 +63,9 @@ export const CommandSidebar: React.FC<CommandSidebarProps> = ({
     },
     {
       label: "Village & Char Area Grid",
-      href: "/village/1",
+      href: "/villages",
       icon: Grid,
-      active: pathname.startsWith("/village/"),
+      active: pathname === "/villages",
     },
     {
       label: "Hardware & Sensor Nodes",

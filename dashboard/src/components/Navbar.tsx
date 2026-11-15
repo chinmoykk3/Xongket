@@ -89,7 +89,7 @@ export const Navbar: React.FC = () => {
       <header className="sticky top-0 z-50 bg-white border-b border-slate-200/90 text-slate-800 shadow-xs select-none">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-15 gap-4">
-            
+
             {/* Left: Emblem & Brand Title */}
             <div className="flex items-center gap-3 shrink-0">
               <Link href="/" className="flex items-center gap-2.5 group">
@@ -144,11 +144,10 @@ export const Navbar: React.FC = () => {
                     key={opt.key}
                     type="button"
                     onClick={() => setLanguage(opt.key)}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
-                      language === opt.key
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${language === opt.key
                         ? "bg-white text-slate-900 shadow-2xs font-semibold"
                         : "text-slate-500 hover:text-slate-900 hover:bg-slate-200/50"
-                    }`}
+                      }`}
                   >
                     {opt.label}
                   </button>

@@ -31,6 +31,7 @@ import {
   Volume2,
   Anchor,
   Box,
+  Target,
 } from "lucide-react";
 import {
   Area,
@@ -45,7 +46,6 @@ import {
 } from "recharts";
 import { CommandSidebar } from "../components/CommandSidebar";
 import { useLanguage } from "../context/LanguageContext";
-import { api } from "../lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -56,12 +56,12 @@ export default function OverviewPage() {
   const [selectedScript, setSelectedScript] = useState<"as" | "br" | "bn" | "hi">("as");
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   
-  // Modals for College Presentation Demo
+  // Modals for presentation demo
   const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState<boolean>(false);
   const [broadcastStep, setBroadcastStep] = useState<number>(0);
   const [isReallocateModalOpen, setIsReallocateModalOpen] = useState<boolean>(false);
   
-  // Dynamic shelter status modified by re-allocation
+  // Dynamic shelter status
   const [shelter1Occupancy, setShelter1Occupancy] = useState<number>(120);
   const [shelter1Boats, setShelter1Boats] = useState<number>(1);
   const [shelter2Rations, setShelter2Rations] = useState<number>(800);
@@ -69,8 +69,8 @@ export default function OverviewPage() {
 
   // Sub-divisions for Majuli
   const subDivisions = [
-    { id: "kamalabari", label: "Kamalabari", status: "warning", level: 428.4, rise: "+14.2 cm/hr", dlEta: "~1.5h", statusText: "WARNING" },
-    { id: "garamur", label: "Garamur", status: "advisory", level: 388.2, rise: "+12.0 cm/hr", dlEta: "~4.5h", statusText: "ADVISORY" },
+    { id: "kamalabari", label: "Kamalabari", status: "warning", level: 428.4, rise: "+14.2 cm/hr", dlEta: "DL (450cm) in ~1.5h", statusText: "WARNING" },
+    { id: "garamur", label: "Garamur", status: "advisory", level: 388.2, rise: "+12.0 cm/hr", dlEta: "DL (450cm) in ~4.5h", statusText: "ADVISORY" },
     { id: "jengraimukh", label: "Jengraimukh (Surge Front)", status: "danger", level: 452.0, rise: "+18.5 cm/hr", dlEta: "BREACHED (+2.0cm)", statusText: "CRITICAL DANGER" },
     { id: "salmora", label: "Salmora", status: "normal", level: 340.5, rise: "+2.1 cm/hr", dlEta: "Safe (>10h)", statusText: "STABLE" },
     { id: "auniati", label: "Auniati", status: "normal", level: 325.0, rise: "+1.5 cm/hr", dlEta: "Safe (>12h)", statusText: "STABLE" },
@@ -78,7 +78,7 @@ export default function OverviewPage() {
 
   const currentStationData = subDivisions.find((s) => s.label === selectedSubDivision) || subDivisions[2];
 
-  // Dynamic hydrograph adapting to horizon and active sub-division
+  // Dynamic hydrograph data
   const getHydrographData = () => {
     const base = currentStationData.level;
     const offset1 = selectedHorizon >= 1 ? 8.2 : 0;
@@ -86,14 +86,14 @@ export default function OverviewPage() {
     const offset6 = selectedHorizon >= 6 ? 33.7 : 0;
 
     return [
-      { time: "-24h", fullTime: "Yesterday 14:30", sonar: Number((base - 53.4).toFixed(1)), mlProjected: null, dhemajiWave: Number((base - 68.0).toFixed(1)), p10: null, p90: null },
-      { time: "-18h", fullTime: "Yesterday 20:30", sonar: Number((base - 46.0).toFixed(1)), mlProjected: null, dhemajiWave: Number((base - 60.0).toFixed(1)), p10: null, p90: null },
-      { time: "-12h", fullTime: "Today 02:30 IST", sonar: Number((base - 33.2).toFixed(1)), mlProjected: null, dhemajiWave: Number((base - 46.0).toFixed(1)), p10: null, p90: null },
-      { time: "-6h", fullTime: "Today 08:30 IST", sonar: Number((base - 16.4).toFixed(1)), mlProjected: null, dhemajiWave: Number((base - 23.0).toFixed(1)), p10: null, p90: null },
-      { time: "Live", fullTime: "Live (14:30)", sonar: base, mlProjected: base, dhemajiWave: Number((base - 6.4).toFixed(1)), p10: base - 4.4, p90: base + 3.6 },
-      { time: "+1h", fullTime: "+1h (15:30)", sonar: null, mlProjected: Number((base + offset1).toFixed(1)), dhemajiWave: Number((base + offset1 + 2).toFixed(1)), p10: Number((base + offset1 - 6.1).toFixed(1)), p90: Number((base + offset1 + 5.4).toFixed(1)) },
-      { time: "+3h", fullTime: "+3h (17:30)", sonar: null, mlProjected: Number((base + offset3).toFixed(1)), dhemajiWave: Number((base + offset3 + 3).toFixed(1)), p10: Number((base + offset3 - 8.7).toFixed(1)), p90: Number((base + offset3 + 8.6).toFixed(1)) },
-      { time: "+6h", fullTime: "+6h (20:30 Crest)", sonar: null, mlProjected: Number((base + offset6).toFixed(1)), dhemajiWave: Number((base + offset6 + 4).toFixed(1)), p10: Number((base + offset6 - 13.6).toFixed(1)), p90: Number((base + offset6 + 13.1).toFixed(1)) },
+      { time: "-24h (Yesterday 14:30)", displayTime: "-24h", sonar: Number((base - 53.4).toFixed(1)), mlProjected: null, dhemajiWave: Number((base - 68.0).toFixed(1)), p10: null, p90: null },
+      { time: "-18h", displayTime: "-18h", sonar: Number((base - 46.0).toFixed(1)), mlProjected: null, dhemajiWave: Number((base - 60.0).toFixed(1)), p10: null, p90: null },
+      { time: "-12h (02:30 IST)", displayTime: "-12h", sonar: Number((base - 33.2).toFixed(1)), mlProjected: null, dhemajiWave: Number((base - 46.0).toFixed(1)), p10: null, p90: null },
+      { time: "-6h", displayTime: "-6h", sonar: Number((base - 16.4).toFixed(1)), mlProjected: null, dhemajiWave: Number((base - 23.0).toFixed(1)), p10: null, p90: null },
+      { time: "14:30 Live (428.4 cm)", displayTime: "Live", sonar: base, mlProjected: base, dhemajiWave: Number((base - 6.4).toFixed(1)), p10: base - 4.4, p90: base + 3.6 },
+      { time: "+1h", displayTime: "+1h", sonar: null, mlProjected: Number((base + offset1).toFixed(1)), dhemajiWave: Number((base + offset1 + 2).toFixed(1)), p10: Number((base + offset1 - 6.1).toFixed(1)), p90: Number((base + offset1 + 5.4).toFixed(1)) },
+      { time: "+3h (17:30)", displayTime: "+3h", sonar: null, mlProjected: Number((base + offset3).toFixed(1)), dhemajiWave: Number((base + offset3 + 3).toFixed(1)), p10: Number((base + offset3 - 8.7).toFixed(1)), p90: Number((base + offset3 + 8.6).toFixed(1)) },
+      { time: "+6h (20:30 Crest)", displayTime: "+6h", sonar: null, mlProjected: Number((base + offset6).toFixed(1)), dhemajiWave: Number((base + offset6 + 4).toFixed(1)), p10: Number((base + offset6 - 13.6).toFixed(1)), p90: Number((base + offset6 + 13.1).toFixed(1)) },
     ];
   };
 
@@ -110,7 +110,6 @@ export default function OverviewPage() {
     setTimeout(() => setIsRefreshing(false), 600);
   };
 
-  // Play audio chime for siren during demo presentation
   const playSirenTone = () => {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -127,7 +126,7 @@ export default function OverviewPage() {
       osc.start();
       osc.stop(audioCtx.currentTime + 0.9);
     } catch {
-      // AudioContext unavailable or blocked
+      // AudioContext fallback
     }
   };
 
@@ -135,7 +134,6 @@ export default function OverviewPage() {
     setIsBroadcastModalOpen(true);
     setBroadcastStep(1);
     playSirenTone();
-
     setTimeout(() => setBroadcastStep(2), 700);
     setTimeout(() => {
       setBroadcastStep(3);
@@ -147,16 +145,16 @@ export default function OverviewPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-60px)] w-full bg-[#f4f6f9]">
-      {/* Persistent Operations Sidebar */}
+      {/* Persistent Left Operations Sidebar */}
       <CommandSidebar />
 
-      {/* Main Operational Console */}
+      {/* Main Operational Console Canvas */}
       <main className="flex-1 p-4 lg:p-6 space-y-4 overflow-y-auto">
         
         {/* Operations Sub-Header Banner */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            {/* Active Surge Advisory & HydroNet Sync Tags */}
+            {/* Status tags */}
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
@@ -164,9 +162,6 @@ export default function OverviewPage() {
               </span>
               <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium text-slate-500 bg-slate-50 border border-slate-200">
                 ⚡ INSAT-3DR + HydroNet v4.1 Sync
-              </span>
-              <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-md text-[9.5px] font-mono font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                DEMO MODE ACTIVE
               </span>
             </div>
 
@@ -187,7 +182,7 @@ export default function OverviewPage() {
             </div>
           </div>
 
-          {/* Station Title & Sub-Divisions */}
+          {/* Station Title & Sub-Divisions Monitored */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
             <div>
               <h1 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-baseline gap-2">
@@ -214,8 +209,8 @@ export default function OverviewPage() {
                     className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       isSelected
                         ? isDanger
-                          ? "bg-red-50 text-red-700 border-2 border-red-500 shadow-2xs scale-102"
-                          : "bg-sky-50 text-sky-800 border-2 border-sky-500 shadow-2xs scale-102"
+                          ? "bg-red-50 text-red-700 border-2 border-red-500 shadow-2xs"
+                          : "bg-sky-50 text-sky-800 border-2 border-sky-500 shadow-2xs"
                         : "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
                     }`}
                   >
@@ -252,43 +247,29 @@ export default function OverviewPage() {
             </div>
           </div>
 
-          {/* Card 2: Selected Station Crest */}
+          {/* Card 2: Kamalabari Ghat Crest */}
           <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[10.5px] font-bold text-slate-400 tracking-wider uppercase truncate">
-                {currentStationData.label.split(" ")[0]} Crest
+                Kamalabari Ghat Crest
               </span>
-              <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                  currentStationData.status === "danger"
-                    ? "bg-red-50 text-red-700 border border-red-200"
-                    : currentStationData.status === "warning"
-                    ? "bg-amber-50 text-amber-700 border border-amber-200"
-                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                }`}
-              >
-                {currentStationData.statusText}
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200">
+                WARNING
               </span>
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span
-                className={`text-2xl font-black tracking-tight ${
-                  currentStationData.status === "danger"
-                    ? "text-red-600"
-                    : currentStationData.status === "warning"
-                    ? "text-amber-500"
-                    : "text-emerald-600"
-                }`}
-              >
-                {currentStationData.level}
-              </span>
+              <span className="text-2xl font-black text-amber-500 tracking-tight">428.4</span>
               <span className="text-xs font-semibold text-slate-500">cm</span>
             </div>
             <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-100">
               <span className="text-amber-700 font-medium flex items-center gap-0.5">
-                ↗ {currentStationData.rise}
+                ↗ +14.2 cm/hr
               </span>
-              <span>DL: <strong className="text-slate-700">{currentStationData.dlEta}</strong></span>
+              <span>DL (450cm) in <strong className="text-slate-700">~1.5h</strong></span>
+            </div>
+            {/* Visual Level Progress Bar */}
+            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-gradient-to-r from-amber-400 to-amber-600 h-full rounded-full w-[88%]" />
             </div>
           </div>
 
@@ -310,6 +291,10 @@ export default function OverviewPage() {
               <span>Soil Saturation:</span>
               <span className="font-semibold text-slate-700">82.4% Antecedent</span>
             </div>
+            {/* Visual Rain Progress Bar */}
+            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-gradient-to-r from-sky-400 to-blue-600 h-full rounded-full w-[82%]" />
+            </div>
           </div>
 
           {/* Card 4: AI Forecast Peak */}
@@ -323,16 +308,16 @@ export default function OverviewPage() {
               </span>
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black text-red-600 tracking-tight">
-                {(currentStationData.level + (selectedHorizon === 1 ? 8.2 : selectedHorizon === 3 ? 21.5 : 33.7)).toFixed(1)}
-              </span>
+              <span className="text-2xl font-black text-red-600 tracking-tight">462.1</span>
               <span className="text-xs font-semibold text-slate-500">cm</span>
             </div>
             <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-100">
               <span>Quantile 80%</span>
-              <span className="font-mono font-medium text-slate-700">
-                [{(currentStationData.level + 20.1).toFixed(1)} - {(currentStationData.level + 46.8).toFixed(1)} cm]
-              </span>
+              <span className="font-mono font-medium text-slate-700">[448.5 - 475.2 cm]</span>
+            </div>
+            {/* Visual Danger Progress Bar */}
+            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-gradient-to-r from-orange-500 to-red-600 h-full rounded-full w-[96%]" />
             </div>
           </div>
 
@@ -352,7 +337,7 @@ export default function OverviewPage() {
                     Predictive Hydrograph & Surge Wave Propagation
                   </h3>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    HC-SR04 Live Gauge ({currentStationData.label.split(" ")[0]}) vs. Upper Dhemaji Inflow Model (+4.2h Travel Lag)
+                    HC-SR04 Live Gauge (Kamalabari) vs. Upper Dhemaji Inflow Model (+4.2h Travel Lag)
                   </p>
                 </div>
 
@@ -385,18 +370,18 @@ export default function OverviewPage() {
               </div>
 
               {/* Hydrograph Chart Canvas */}
-              <div className="h-[280px] w-full pt-2">
+              <div className="h-[290px] w-full pt-2 relative">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={getHydrographData()} margin={{ top: 10, right: 15, left: -10, bottom: 0 }}>
+                  <ComposedChart data={getHydrographData()} margin={{ top: 20, right: 20, left: -10, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                     <XAxis
                       dataKey="time"
-                      tick={{ fill: "#64748b", fontSize: 11 }}
+                      tick={{ fill: "#64748b", fontSize: 10.5 }}
                       axisLine={{ stroke: "#cbd5e1" }}
                       tickLine={false}
                     />
                     <YAxis
-                      domain={[280, 500]}
+                      domain={[320, 500]}
                       tick={{ fill: "#64748b", fontSize: 11 }}
                       axisLine={{ stroke: "#cbd5e1" }}
                       tickLine={false}
@@ -420,7 +405,7 @@ export default function OverviewPage() {
                       label={{
                         value: "DANGER LEVEL: 450.0 cm (বিপদসীমা)",
                         fill: "#dc2626",
-                        fontSize: 10.5,
+                        fontSize: 10,
                         position: "insideTopLeft",
                       }}
                     />
@@ -433,7 +418,20 @@ export default function OverviewPage() {
                       label={{
                         value: "WARNING LEVEL: 410.0 cm (সতৰ্কতা সীমা)",
                         fill: "#d97706",
-                        fontSize: 10.5,
+                        fontSize: 10,
+                        position: "insideBottomLeft",
+                      }}
+                    />
+
+                    {/* Normal Level Line (350 cm) */}
+                    <ReferenceLine
+                      y={350}
+                      stroke="#38bdf8"
+                      strokeDasharray="3 3"
+                      label={{
+                        value: "NORMAL LEVEL: 350.0 cm",
+                        fill: "#0284c7",
+                        fontSize: 9.5,
                         position: "insideBottomLeft",
                       }}
                     />
@@ -444,7 +442,7 @@ export default function OverviewPage() {
                       dataKey="p90"
                       stroke="none"
                       fill="#bae6fd"
-                      fillOpacity={0.4}
+                      fillOpacity={0.35}
                     />
                     <Area
                       type="monotone"
@@ -517,7 +515,7 @@ export default function OverviewPage() {
             </div>
 
             {/* Hydrological Explainability Box */}
-            <div className="bg-sky-50/70 border border-sky-100 rounded-2xl p-4 shadow-2xs flex items-start gap-3.5">
+            <div className="bg-[#f0f9ff] border border-sky-100 rounded-2xl p-4 shadow-2xs flex items-start gap-3.5">
               <div className="w-8 h-8 rounded-xl bg-sky-500 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                 <Shield className="w-4 h-4" />
               </div>
@@ -692,7 +690,7 @@ export default function OverviewPage() {
           {/* Right Column (4 of 12 cols): Spatial Vulnerability + Rapid Dispatch + Relief Shelters */}
           <div className="lg:col-span-4 space-y-4">
             
-            {/* Spatial Basin Vulnerability Card (Standalone SVG Map + Flow Metrics) */}
+            {/* Spatial Basin Vulnerability Card */}
             <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
@@ -703,20 +701,15 @@ export default function OverviewPage() {
                 </span>
               </div>
 
-              {/* Mini Map Container with Embedded Vector River & Island Cartography */}
+              {/* Vector Cartography of Majuli Reach */}
               <div className="relative w-full h-38 bg-[#0c1829] rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center">
-                {/* SVG Vector River Basin Map of Majuli */}
                 <svg viewBox="0 0 400 180" className="w-full h-full object-cover">
-                  {/* Water River Bed Background */}
                   <rect width="400" height="180" fill="#0f2642" />
-                  
-                  {/* Brahmaputra Main Channels */}
                   <path
                     d="M-20,40 C60,45 120,30 200,60 C280,90 340,75 420,80 L420,130 C350,120 270,140 190,110 C110,80 50,110 -20,105 Z"
                     fill="#1e4e79"
                     opacity="0.8"
                   />
-                  {/* Majuli Island Shape */}
                   <path
                     d="M100,55 C150,45 240,50 300,75 C290,110 220,120 140,105 C110,100 80,85 100,55 Z"
                     fill="#15362a"
@@ -734,25 +727,15 @@ export default function OverviewPage() {
                   <text x="260" y="160" fill="#7dd3fc" fontSize="9" fontFamily="monospace">
                     Kherkutia Xuti Channel
                   </text>
-
-                  {/* Sandbars (Chars) */}
                   <ellipse cx="65" cy="75" rx="16" ry="7" fill="#b45309" opacity="0.6" />
                   <ellipse cx="340" cy="100" rx="20" ry="8" fill="#b45309" opacity="0.6" />
-                  <text x="50" y="78" fill="#fde68a" fontSize="7">Char #4</text>
-                  <text x="325" y="103" fill="#fde68a" fontSize="7">Char #7</text>
-
-                  {/* Station Pins */}
-                  {/* Kamalabari Ghat */}
                   <circle cx="140" cy="98" r="4" fill="#f59e0b" />
                   <text x="146" y="102" fill="#fbbf24" fontSize="8" fontWeight="bold">Kamalabari</text>
-
-                  {/* Jengraimukh (Danger Hub) */}
                   <circle cx="270" cy="72" r="5" fill="#ef4444" />
                   <circle cx="270" cy="72" r="10" fill="#ef4444" opacity="0.4" className="animate-ping" />
                   <text x="210" y="65" fill="#fca5a5" fontSize="8" fontWeight="bold">Jengraimukh (Breach Zone)</text>
                 </svg>
 
-                {/* Overlay Badge */}
                 <div className="absolute top-2 right-2 bg-red-600/90 text-white px-2 py-0.5 rounded text-[9.5px] font-bold tracking-tight shadow-sm flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
                   High Inundation Risk
@@ -765,21 +748,16 @@ export default function OverviewPage() {
               {/* Live Berth Camera Stream (Simulated Real-time Water Flow) */}
               <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-950">
                 <div className="w-full h-24 bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 flex flex-col justify-between p-2 relative overflow-hidden">
-                  {/* Simulated wave ripples */}
                   <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:12px_12px]" />
-                  
-                  {/* Live Rec Indicator */}
                   <div className="flex items-center justify-between z-10">
                     <div className="bg-red-600/90 text-white text-[9px] px-2 py-0.5 rounded font-mono font-bold flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                      CAM-01: LIVE STREAM [BERTH #2]
+                      BOAT CAMERA FEED
                     </div>
                     <div className="text-[9.5px] font-mono text-emerald-400 font-semibold bg-slate-900/80 px-1.5 rounded">
                       FLOW: ~2.4 m/s (TURBULENT)
                     </div>
                   </div>
-
-                  {/* Flow meter overlay */}
                   <div className="z-10 bg-slate-900/90 backdrop-blur-xs text-white/90 text-[10px] p-1.5 rounded border border-slate-800 flex items-center justify-between">
                     <span className="font-semibold text-slate-200">Kamalabari Ferry Ghat Berth</span>
                     <span className="font-mono text-[9px] text-amber-400">SURGE CREST: +14.2 cm/h</span>
