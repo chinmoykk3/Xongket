@@ -4,6 +4,7 @@ for every test function."""
 import pytest
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.database import Base
 
@@ -17,6 +18,7 @@ def db_session():
     engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
     )
 
     @event.listens_for(engine, "connect")
@@ -34,4 +36,3 @@ def db_session():
         session.close()
         Base.metadata.drop_all(bind=engine)
         engine.dispose()
-

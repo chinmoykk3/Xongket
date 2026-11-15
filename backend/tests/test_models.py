@@ -151,6 +151,14 @@ class TestNode:
         n = _make_node(db_session, v)
         assert n.id is not None
         assert n.type == NodeType.water_level.value
+        assert n.api_key is not None
+        assert len(n.api_key) >= 16
+
+    def test_api_key_custom(self, db_session):
+        d = _make_district(db_session)
+        v = _make_village(db_session, d)
+        n = _make_node(db_session, v, api_key="secret-key-12345")
+        assert n.api_key == "secret-key-12345"
 
     def test_all_types_including_new(self, db_session):
         """All 6 node types: water_level, rain_gauge, soil_moisture, seismic, temperature, humidity."""

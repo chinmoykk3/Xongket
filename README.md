@@ -27,12 +27,12 @@ The physical deployment uses low-cost NodeMCU ESP8266 microcontrollers paired wi
 │  - HC-SR04 (water lvl) │                 │  backend/                 │              │  (Next.js)   │
 │  - Capacitive Soil v2  │                 │  - SQLite (dev) / PG (prd)│              │  dashboard/  │
 │  - DHT11 (temp & hum)  │                 │  - Open-Meteo rain sync   │              └──────────────┘
-│  - SSD1306 OLED        │                 └─────────────┬─────────────┘
-└────────────────────────┘                               │
-                                                         │
+│  - SSD1306 OLED        │                 │  - POST /ingest pipeline  │
+└────────────────────────┘                 │  - aiomqtt subscriber     │
+                                           └─────────────┬─────────────┘
         ┌────────────────────────┐                       │
         │  Sensor Simulator      │ ──────────────────────┤
-        │  simulator/ (ESP8266)  │  synthetic readings   │
+        │  simulator/ (ESP8266)  │  HTTP / MQTT          │
         └────────────────────────┘                       ▼
                                            ┌───────────────────────────┐
                                            │  AI Engine (ai/)          │
@@ -43,39 +43,161 @@ The physical deployment uses low-cost NodeMCU ESP8266 microcontrollers paired wi
 
 | Component | Stack | Path |
 |-----------|-------|------|
-| **Backend** | FastAPI, Python 3.11+, SQLAlchemy 2.0, Alembic, HTTPX | `backend/` |
+| **Backend** | FastAPI, Python 3.11+, SQLAlchemy 2.0, Alembic, HTTPX, aiomqtt | `backend/` |
 | **AI Engine** | Python package (imported by backend) | `ai/` |
-| **Simulator** | Python (simulates 3× ESP8266 stations + sensor noise & errors) | `simulator/` |
+| **Simulator** | Python CLI simulating 120 nodes across 5 disaster/fault scenarios | `simulator/` |
 | **Dashboard** | Next.js 14, TypeScript, Tailwind CSS | `dashboard/` |
 | **Firmware** | NodeMCU ESP8266 (PlatformIO / Arduino, ESP32 extensible) | `firmware/` |
 | **Docs** | Markdown | `docs/` |
 
 ---
 
-## Database Models
+## IoT Data Ingestion Pipeline
 
-The database layer uses SQLAlchemy 2.0 and Alembic migrations, designed to run seamlessly on **SQLite (default)** and **PostgreSQL (production)** by changing only `DATABASE_URL`:
+### HTTP Ingestion: `POST /ingest`
 
-- **districts**: id, name, state (Assam)
-- **villages**: id, district_id, name, lat, lng, population, language (`assamese`, `bodo`, `bengali`, `hindi`), `is_char_area`, `nearest_shelter_id`
-- **shelters**: id, name, lat, lng, capacity
-- **nodes**: id, village_id, type (`water_level`, `rain_gauge`, `soil_moisture`, `seismic`, `temperature`, `humidity`), lat, lng, status, battery_pct (nullable), last_seen, `device_type` (`esp8266`, `esp32`, `virtual`), `source` (`device`, `api`, `simulator`), `mount_height_cm` (for HC-SR04 calibration), `raw_dry` & `raw_wet` (for capacitive soil calibration)
-- **readings**: id, node_id, ts, value, unit (`cm`, `mm`, `%`, `°C`), quality_flag (`ok`, `error`, `stale`), composite index on `(node_id, ts)`
-- **thresholds**: id, node_type, village_id (nullable for global), warning_level, danger_level
-- **alerts**: id, village_id, severity (`advisory`, `warning`, `danger`), hazard (`flood`, `landslide`, `earthquake`), message, created_at, status, source (`rule`, `ai`, `manual`)
-- **alert_deliveries**: id, alert_id, channel (`sms`, `ivr`, `whatsapp`, `siren`, `dashboard`), status, sent_at
-- **contacts**: id, village_id, name, phone, role (`volunteer`, `gram_panchayat`, `asdma`)
+Accepts a single telemetry reading or an array batch of readings.
+
+**Headers:**
+```http
+X-API-Key: <per-node-api-key>
+Content-Type: application/json
+```
+
+**Single Reading Payload:**
+```json
+{
+  "node_id": 49,
+  "ts": "2026-11-15T13:30:00Z",
+  "value": 245.5,
+  "unit": "cm",
+  "battery_pct": 89.0
+}
+```
+
+**Batch Payload (e.g. after network reconnection):**
+```json
+[
+  { "node_id": 49, "ts": "2026-11-15T13:20:00Z", "value": 240.0, "unit": "cm", "battery_pct": 90.0 },
+  { "node_id": 49, "ts": "2026-11-15T13:25:00Z", "value": 245.5, "unit": "cm", "battery_pct": 89.5 },
+  { "node_id": 49, "ts": "2026-11-15T13:30:00Z", "value": 250.2, "unit": "cm", "battery_pct": 89.0 }
+]
+```
+
+**Quality Flag Assessment:**
+Each reading is evaluated and assigned a `quality_flag`:
+- `ok`: Valid reading within realistic sensor and environmental ranges.
+- `out_of_range`: Exceeds physical bounds (e.g. water level exceeding mount height, soil moisture > 100%, DHT11 temp > 65°C or < -20°C).
+- `stuck_value`: 3 or more consecutive identical readings for non-zero sensors indicating sensor freeze.
+- `duplicate_timestamp`: A reading already exists for `(node_id, ts)`.
 
 ---
 
-## Prerequisites
+## Optional MQTT Pipeline
 
-| Tool | Version |
-|------|---------|
-| Python | 3.11+ |
-| Node.js | 18+ |
-| npm | 9+ |
-| Git | 2.x |
+The backend includes an asynchronous MQTT subscriber using `aiomqtt`. When enabled in `.env` via `MQTT_ENABLED=true`, it connects to an MQTT broker and subscribes to:
+
+```
+sensors/{village_id}/{node_id}
+```
+
+Incoming JSON messages are automatically forwarded to the ingestion engine.
+
+### Installing Mosquitto Natively (No Docker)
+
+<details>
+<summary><strong>Windows</strong></summary>
+
+1. Download the native 64-bit installer from [mosquitto.org/download](https://mosquitto.org/download/) (e.g., `mosquitto-2.x.x-install-windows-x64.exe`).
+2. Run the installer (defaults to `C:\Program Files\mosquitto`).
+3. Create or edit `mosquitto.conf` in that folder to allow local unauthenticated traffic if testing locally:
+   ```text
+   listener 1883
+   allow_anonymous true
+   ```
+4. Start Mosquitto from an administrative PowerShell or cmd:
+   ```powershell
+   cd "C:\Program Files\mosquitto"
+   .\mosquitto.exe -v -c mosquitto.conf
+   ```
+   Or start as a Windows Service:
+   ```powershell
+   net start mosquitto
+   ```
+</details>
+
+<details>
+<summary><strong>macOS</strong></summary>
+
+1. Install via Homebrew:
+   ```bash
+   brew install mosquitto
+   ```
+2. Start the Mosquitto service:
+   ```bash
+   brew services start mosquitto
+   ```
+   Or run directly:
+   ```bash
+   /usr/local/sbin/mosquitto -c /usr/local/etc/mosquitto/mosquitto.conf
+   # Apple Silicon:
+   /opt/homebrew/sbin/mosquitto -c /opt/homebrew/etc/mosquitto/mosquitto.conf
+   ```
+</details>
+
+<details>
+<summary><strong>Linux (Debian / Ubuntu / Raspberry Pi OS)</strong></summary>
+
+1. Install via apt:
+   ```bash
+   sudo apt update
+   sudo apt install -y mosquitto mosquitto-clients
+   ```
+2. Enable and start systemd service:
+   ```bash
+   sudo systemctl enable mosquitto
+   sudo systemctl start mosquitto
+   sudo systemctl status mosquitto
+   ```
+</details>
+
+---
+
+## Telemetry Simulator
+
+The simulator (`simulator/cli.py`) can generate telemetry for all 120 seeded nodes across 5 disaster, baseline, and failure scenarios.
+
+### Simulator Scenarios
+
+| Scenario | CLI Argument | Behavior & Telemetry Dynamics |
+|----------|--------------|-------------------------------|
+| **Normal** | `--scenario normal` | Safe baseline fluctuations across all sensors. Water levels 120–280 cm, light rainfall 0–8 mm, soil moisture 40–70%, temperature 26–32°C. |
+| **Flood** | `--scenario flood` | Simulates a monsoon deluge. Heavy sustained rainfall (40 -> 130 mm/h) triggers rapidly rising river and pond water levels climbing past warning (600 cm) to critical danger (> 850 cm), accompanied by saturated soil. |
+| **Landslide** | `--scenario landslide` | Continuous rain saturates hilly terrain. Soil moisture spikes past warning (80%) to critical liquid saturation (92%–98%), accompanied by elevated seismic micro-tremors (0.1 -> 1.0g). |
+| **Sensor Fault** | `--scenario sensor_fault` | Injects telemetry defects to verify data cleaning: frozen stuck values, impossible out-of-range spikes (e.g. 5000 cm water level, 145°C DHT11), and duplicate timestamps. |
+| **Network Outage** | `--scenario network_outage` | Simulates rural connectivity dropouts. Nodes go silent for 3 cycles, buffering readings locally in memory, then transmit the full backlog as a batch request when connectivity restores on cycle 4. |
+
+### Running the Simulator
+
+```bash
+# 1. Normal baseline (infinite loop, 2s interval)
+python -m simulator.cli --scenario normal --interval 2
+
+# 2. Flood scenario in Majuli district (3 cycles, 1s interval)
+python -m simulator.cli --scenario flood --interval 1 --cycles 3 --district Majuli
+
+# 3. Landslide scenario in Dhemaji
+python -m simulator.cli --scenario landslide --interval 1 --cycles 5 --district Dhemaji
+
+# 4. Sensor fault injection test
+python -m simulator.cli --scenario sensor_fault --cycles 4
+
+# 5. Network outage buffer & batch recovery test
+python -m simulator.cli --scenario network_outage --cycles 6
+
+# 6. Stream telemetry over native MQTT instead of HTTP
+python -m simulator.cli --scenario flood --mqtt --mqtt-broker localhost
+```
 
 ---
 
@@ -107,7 +229,7 @@ alembic upgrade head
 python seed.py
 ```
 
-### 3 · Run Model & Service Tests
+### 3 · Run Full Unit Test Suite
 
 ```bash
 python -m pytest tests/ -v
@@ -119,14 +241,7 @@ python -m pytest tests/ -v
 python -m app.services.rainfall
 ```
 
-### 5 · Run Sensor Simulator (Hardware Mimic)
-
-```bash
-# From workspace root
-python -m simulator.main
-```
-
-### 6 · Full Monorepo Development
+### 5 · Start Servers Concurrently
 
 ```bash
 # From workspace root
