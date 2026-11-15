@@ -1,4 +1,4 @@
-export type Language = "en" | "as";
+export type Language = "en" | "as" | "br" | "bn" | "hi";
 
 export type UserRole = "admin" | "district_officer" | "volunteer";
 

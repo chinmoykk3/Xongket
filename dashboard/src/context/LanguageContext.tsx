@@ -146,6 +146,57 @@ const DICTIONARY: Record<Language, Record<string, string>> = {
     all_severities: "সকলো মাত্ৰা",
     all_districts: "সকলো জিলা",
   },
+  br: {
+    app_title: "সংকেत (XONGKET)",
+    app_subtitle: "आसाम गामिया दैबाना सिगां-फोराव थांखि",
+    nav_overview: "लाइभ नायनाय",
+    nav_villages: "गामि आरो गे'ज",
+    nav_alerts: "सिखिनाय सामलायनाय",
+    nav_nodes: "सेन्सर न'डफोर",
+    nav_village_mode: "गामि म'ड",
+    village_mode: "गामि म'ड",
+    nav_login: "हाबनाय",
+    nav_logout: "ओंखारनाय",
+    normal: "गाहाम",
+    advisory: "सुबुं-गोसोखां",
+    warning: "सावधान",
+    danger: "खैफोद",
+    critical: "गोबां खैफोद",
+  },
+  bn: {
+    app_title: "সংকেত (XONGKET)",
+    app_subtitle: "আসাম গ্রামীণ দুর্যোগ আগাম সতর্কবার্তা ব্যবস্থা",
+    nav_overview: "লাইভ দৃশ্যপট",
+    nav_villages: "গ্রাম ও গেজ",
+    nav_alerts: "সতর্কবার্তা নিয়ন্ত্রণ",
+    nav_nodes: "সেন্সর নোড",
+    nav_village_mode: "ভিলেজ মোড",
+    village_mode: "ভিলেজ মোড",
+    nav_login: "প্রবেশ",
+    nav_logout: "প্রস্থান",
+    normal: "স্বাভাবিক",
+    advisory: "পরামর্শ",
+    warning: "সতর্কতা",
+    danger: "বিপদ",
+    critical: "চরম বিপদ",
+  },
+  hi: {
+    app_title: "संकेत (XONGKET)",
+    app_subtitle: "असम ग्रामीण आपदा पूर्व चेतावनी प्रणाली",
+    nav_overview: "लाइव अवलोकन",
+    nav_villages: "गांव और गेज",
+    nav_alerts: "चेतावनी नियंत्रण",
+    nav_nodes: "सेंसर नोड्स",
+    nav_village_mode: "विलेज मोड",
+    village_mode: "विलेज मोड",
+    nav_login: "लॉग इन",
+    nav_logout: "लॉग आउट",
+    normal: "सामान्य",
+    advisory: "परामर्श",
+    warning: "चेतावनी",
+    danger: "खतरा",
+    critical: "अति गंभीर खतरा",
+  },
 };
 
 const LanguageContext = createContext<LanguageContextType>({
@@ -159,7 +210,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     const saved = localStorage.getItem("xongket_lang") as Language;
-    if (saved === "en" || saved === "as") {
+    if (saved && ["en", "as", "br", "bn", "hi"].includes(saved)) {
       setLanguageState(saved);
     }
   }, []);
@@ -170,7 +221,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const t = (key: string): string => {
-    return DICTIONARY[language][key] || DICTIONARY.en[key] || key;
+    return DICTIONARY[language]?.[key] || DICTIONARY.as?.[key] || DICTIONARY.en[key] || key;
   };
 
   return (
