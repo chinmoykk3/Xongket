@@ -39,8 +39,11 @@ desktop.ini
 .pio/
 .pioenvs/
 .piolibdeps/
+firmware/**/config.h
+firmware/lib/common/config.h
 
 # ─── Misc ────────────────────────────────────────────────
+*.exe
 *.log
 coverage/
 .coverage

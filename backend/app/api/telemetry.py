@@ -84,6 +84,49 @@ def get_village_contacts(id: int, db: Session = Depends(get_db)):
     return db.query(Contact).filter(Contact.village_id == id).order_by(Contact.role).all()
 
 
+@router.get("/village/{id}/status", summary="Get live alert status for village alert unit (Node 3)")
+@router.get("/villages/{id}/status", summary="Get live alert status for village alert unit (Node 3 alias)")
+def get_village_status(id: int, db: Session = Depends(get_db)):
+    village = db.query(Village).filter(Village.id == id).first()
+    if not village:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Village with id={id} not found",
+        )
+    active_alerts = (
+        db.query(Alert)
+        .filter(Alert.village_id == id, Alert.status == AlertStatus.active.value)
+        .all()
+    )
+    sev_rank = {"danger": 3, "warning": 2, "advisory": 1}
+    if active_alerts:
+        sorted_alerts = sorted(
+            active_alerts,
+            key=lambda a: sev_rank.get(a.severity.lower(), 0),
+            reverse=True,
+        )
+        highest = sorted_alerts[0]
+        return {
+            "village_id": village.id,
+            "village_name": village.name,
+            "severity": highest.severity.upper(),
+            "hazard": highest.hazard,
+            "message": highest.message[:120],
+            "active_alerts_count": len(active_alerts),
+            "timestamp": highest.created_at.isoformat(),
+        }
+
+    return {
+        "village_id": village.id,
+        "village_name": village.name,
+        "severity": "SAFE",
+        "hazard": "none",
+        "message": f"Normal conditions in {village.name}",
+        "active_alerts_count": 0,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 # ── Shelters ─────────────────────────────────────────────
 @router.get("/shelters", response_model=list[ShelterOut], summary="List emergency shelters")
 def list_shelters(db: Session = Depends(get_db)):

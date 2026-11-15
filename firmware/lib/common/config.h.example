@@ -1,0 +1,49 @@
+#ifndef XONGKET_CONFIG_H
+#define XONGKET_CONFIG_H
+
+// ── Wi-Fi Configuration ────────────────────────────────────
+#define WIFI_SSID           "Your_WiFi_SSID"
+#define WIFI_PASSWORD       "Your_WiFi_Password"
+
+// ── Backend Configuration ──────────────────────────────────
+#define BACKEND_HOST        "192.168.1.100"  // Set to PC/Server IP running backend
+#define BACKEND_PORT        8000
+#define INGEST_ENDPOINT     "/ingest"
+
+// ── Per-Node Identity & Secrets ────────────────────────────
+// Match the api_key column in the nodes table for each physical device
+#define NODE1_ID            1
+#define NODE1_API_KEY       "key_node_1"
+
+#define NODE2_ID            2
+#define NODE2_API_KEY       "key_node_2"
+
+#define NODE3_VILLAGE_ID    1
+#define NODE3_API_KEY       "key_node_3"
+
+// ── NTP & Timezone (Assam, India: UTC +5:30) ───────────────
+#define NTP_SERVER_1        "pool.ntp.org"
+#define NTP_SERVER_2        "time.nist.gov"
+#define GMT_OFFSET_SEC      19800      // 5.5 hours * 3600
+#define DAYLIGHT_OFFSET_SEC 0
+
+// ── Hardware Calibration Constants ────────────────────────
+// Node 1 (Water Level): Mount height above zero datum / riverbed
+#define NODE1_MOUNT_HEIGHT_CM   200.0f
+#define NODE1_DANGER_LEVEL_CM   140.0f
+#define NODE1_WARN_LEVEL_CM     110.0f
+
+// Node 2 (Capacitive Soil v2.0): ADC raw dry (air) and raw wet (water)
+#define NODE2_RAW_DRY           780
+#define NODE2_RAW_WET           380
+
+// Pin Definitions for NodeMCU ESP8266
+// D1 = GPIO5 (SCL for I2C OLED)
+// D2 = GPIO4 (SDA for I2C OLED)
+// D4 = GPIO2 (DHT11 Data)
+// D5 = GPIO14 (HC-SR04 TRIG)
+// D6 = GPIO12 (HC-SR04 ECHO via 5V->3.3V voltage divider)
+// D7 = GPIO13 (Active Buzzer for Village Alert Unit)
+// A0 = ADC0 (Capacitive Soil Sensor Analog Out)
+
+#endif // XONGKET_CONFIG_H
