@@ -1,0 +1,48 @@
+# ─── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+*.so
+
+# ─── Node / Next.js ──────────────────────────────────────
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+
+# ─── Environment ─────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── IDE ─────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── OS ──────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── PlatformIO ──────────────────────────────────────────
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# ─── Misc ────────────────────────────────────────────────
+*.log
+coverage/
+.coverage
+htmlcov/
+
