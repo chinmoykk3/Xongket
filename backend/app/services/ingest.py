@@ -128,11 +128,9 @@ def process_ingest_items(
         if not is_master:
             if not api_key:
                 raise IngestionError("Missing X-API-Key header", status_code=401)
-            for node_id, node in nodes_by_id.items():
-                if node.api_key != api_key:
-                    raise IngestionError(
-                        f"Invalid API key for node {node_id}", status_code=401
-                    )
+            valid_keys = {n.api_key for n in db.query(Node.api_key).all() if n.api_key}
+            if api_key not in valid_keys:
+                raise IngestionError("Invalid API key", status_code=401)
 
     seen_timestamps_in_batch: set[tuple[int, datetime]] = set()
     node_batch_value_history: dict[int, list[float]] = {nid: [] for nid in unique_node_ids}
@@ -224,23 +222,17 @@ def process_ingest_items(
     db.commit()
 
     # ── Broadcast new readings over WebSocket ────────────
-    try:
-        loop = asyncio.get_running_loop()
-        for r in created_readings:
-            loop.create_task(
-                ws_manager.broadcast(
-                    "new_reading",
-                    {
-                        "id": r.id,
-                        "node_id": r.node_id,
-                        "ts": r.ts.isoformat(),
-                        "value": r.value,
-                        "unit": r.unit,
-                        "quality_flag": r.quality_flag,
-                    },
-                )
-            )
-    except RuntimeError:
-        pass
+    for r in created_readings:
+        ws_manager.broadcast_sync(
+            "new_reading",
+            {
+                "id": r.id,
+                "node_id": r.node_id,
+                "ts": r.ts.isoformat(),
+                "value": r.value,
+                "unit": r.unit,
+                "quality_flag": r.quality_flag,
+            },
+        )
 
     return created_readings

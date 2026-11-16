@@ -1,13 +1,26 @@
 #include "wifi_manager.h"
+#include <ESP8266WiFiMulti.h>
 
-WiFiManager::WiFiManager(const char* ssid, const char* password)
-    : _ssid(ssid), _password(password), _lastReconnectAttempt(0) {}
+static ESP8266WiFiMulti wifiMulti;
+
+WiFiManager::WiFiManager(const char* ssid, const char* password, const char* ssid2, const char* password2)
+    : _ssid(ssid), _password(password), _ssid2(ssid2), _password2(password2), _lastReconnectAttempt(0) {}
 
 void WiFiManager::begin() {
     WiFi.mode(WIFI_STA);
     WiFi.setAutoReconnect(true);
-    Serial.printf("[WiFi] Connecting to %s...\n", _ssid);
-    WiFi.begin(_ssid, _password);
+
+    if (_ssid && strlen(_ssid) > 0) {
+        Serial.printf("[WiFi] Adding AP: %s\n", _ssid);
+        wifiMulti.addAP(_ssid, _password);
+    }
+    if (_ssid2 && strlen(_ssid2) > 0) {
+        Serial.printf("[WiFi] Adding Fallback AP: %s\n", _ssid2);
+        wifiMulti.addAP(_ssid2, _password2);
+    }
+
+    Serial.println("[WiFi] Searching and connecting...");
+    wifiMulti.run();
 }
 
 void WiFiManager::update() {
@@ -15,9 +28,8 @@ void WiFiManager::update() {
         unsigned long now = millis();
         if (now - _lastReconnectAttempt > RECONNECT_INTERVAL_MS) {
             _lastReconnectAttempt = now;
-            Serial.println("[WiFi] Lost link. Reconnecting...");
-            WiFi.disconnect();
-            WiFi.begin(_ssid, _password);
+            Serial.println("[WiFi] Link searching...");
+            wifiMulti.run();
         }
     }
 }

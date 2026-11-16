@@ -155,12 +155,18 @@ def list_nodes(
 
 
 # ── Node Readings with Time Range & Downsampling ─────────
+@router.get("/nodes/{id}/latest", response_model=Optional[ReadingOut], summary="Get newest reading for node")
+def get_node_latest_reading(id: int, db: Session = Depends(get_db)):
+    return db.query(Reading).filter(Reading.node_id == id).order_by(Reading.id.desc()).first()
+
+
 @router.get("/nodes/{id}/readings", response_model=list[ReadingOut], summary="Get historical readings for node")
 def get_node_readings(
     id: int,
     start_ts: Optional[datetime] = Query(None, description="Start timestamp (UTC)"),
     end_ts: Optional[datetime] = Query(None, description="End timestamp (UTC)"),
     limit: int = Query(100, ge=1, le=2000, description="Max readings to return"),
+    order: str = Query("asc", description="asc or desc"),
     downsample_interval: Optional[int] = Query(
         None,
         ge=1,
@@ -179,7 +185,11 @@ def get_node_readings(
     if end_ts is not None:
         query = query.filter(Reading.ts <= end_ts)
 
-    query = query.order_by(Reading.ts.asc())
+    if order == "desc":
+        query = query.order_by(Reading.id.desc())
+    else:
+        query = query.order_by(Reading.ts.asc())
+
     raw_readings = query.limit(limit * (downsample_interval or 1)).all()
 
     # If downsampling requested, bucket readings into intervals

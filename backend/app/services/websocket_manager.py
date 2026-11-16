@@ -18,9 +18,11 @@ class ConnectionManager:
     def __init__(self):
         self.active_connections: list[WebSocket] = []
         self._lock = asyncio.Lock()
+        self.loop: asyncio.AbstractEventLoop | None = None
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
+        self.loop = asyncio.get_running_loop()
         async with self._lock:
             self.active_connections.append(websocket)
         logger.info("WebSocket client connected. Total clients: %d", len(self.active_connections))
@@ -52,11 +54,14 @@ class ConnectionManager:
 
     def broadcast_sync(self, event_type: str, data: dict[str, Any]):
         """Safely schedule a broadcast on the running asyncio event loop if active."""
+        if not self.active_connections:
+            return
         try:
             loop = asyncio.get_running_loop()
             loop.create_task(self.broadcast(event_type, data))
         except RuntimeError:
-            pass
+            if self.loop and self.loop.is_running():
+                asyncio.run_coroutine_threadsafe(self.broadcast(event_type, data), self.loop)
 
 
 ws_manager = ConnectionManager()
