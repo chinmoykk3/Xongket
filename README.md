@@ -2,7 +2,7 @@
 
 > IoT + AI + Cloud early-warning platform for flood and landslide disasters in rural Assam.
 
----
+----
 
 ## Hardware Architecture
 
