@@ -1,4 +1,4 @@
-# 🌊 Xongket — Integrated Rural Disaster Management System for Assam
+# 🌊 Xongket — Integrated Rural Disaster Management System for Assam.
 
 > IoT + AI + Cloud early-warning platform for flood and landslide disasters in rural Assam.
 
